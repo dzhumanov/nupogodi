@@ -5,6 +5,7 @@ interface Egg {
   id: number;
   side: string;
   progress: number;
+  startTime?: number;
 }
 
 function App() {
@@ -17,15 +18,16 @@ function App() {
   // Создаем яйца
   useEffect(() => {
     const interval = setInterval(() => {
-      const random = Math.floor(Math.random() * 100);
+      const random = Math.floor(Math.random() * 10000);
       const egg = {
         id: random,
         side: random % 2 === 0 ? "left" : "right",
         progress: 0,
       };
+      console.log(egg);
       setLeftEggs((prev) => (egg.side === "left" ? [...prev, egg] : prev));
       setRightEggs((prev) => (egg.side === "right" ? [...prev, egg] : prev));
-    }, 3000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, []);
@@ -33,14 +35,52 @@ function App() {
   // Логика падения яиц (к каждому яйцу добавляется 25% прогресса)
   useEffect(() => {
     const fallEggs = () => {
+      const currentTime = Date.now();
+
       setLeftEggs((prev) =>
-        prev.map((egg) => ({ ...egg, progress: egg.progress + 25 }))
+        prev.map((egg) => {
+          if (egg.progress === 0) {
+            if (!egg.startTime) {
+              egg.startTime = currentTime;
+            }
+
+            const elapsedTime = currentTime - egg.startTime;
+
+            if (elapsedTime >= 300) {
+              return { ...egg, progress: egg.progress + 25 };
+            }
+          }
+
+          // Обновляем яйца, если их прогресс больше 0
+          return egg.progress > 0
+            ? { ...egg, progress: egg.progress + 25 }
+            : egg;
+        })
       );
+
       setRightEggs((prev) =>
-        prev.map((egg) => ({ ...egg, progress: egg.progress + 25 }))
+        prev.map((egg) => {
+          if (egg.progress === 0) {
+            if (!egg.startTime) {
+              egg.startTime = currentTime;
+            }
+
+            const elapsedTime = currentTime - egg.startTime;
+
+            if (elapsedTime >= 500) {
+              return { ...egg, progress: egg.progress + 25 };
+            }
+          }
+
+          return egg.progress > 0
+            ? { ...egg, progress: egg.progress + 25 }
+            : egg;
+        })
       );
     };
+
     const fallIntervalId = setInterval(fallEggs, 1000);
+
     return () => clearInterval(fallIntervalId);
   }, []);
 
@@ -49,7 +89,7 @@ function App() {
     const checkCatch = () => {
       setLeftEggs((prev) =>
         prev.filter((egg) => {
-          if (egg.progress >= 100) {
+          if (egg.progress >= 125) {
             if (position === "left") {
               setScore((prevScore) => prevScore + 1);
               return false;
@@ -63,7 +103,7 @@ function App() {
 
       setRightEggs((prev) =>
         prev.filter((egg) => {
-          if (egg.progress >= 100) {
+          if (egg.progress >= 125) {
             if (position === "right") {
               setScore((prevScore) => prevScore + 1);
               return false;
@@ -85,6 +125,22 @@ function App() {
 
   const onLeft = () => setPosition("left");
   const onRight = () => setPosition("right");
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "KeyA") {
+        onLeft();
+      } else if (event.code === "KeyD") {
+        onRight();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   return (
     <>
@@ -115,6 +171,7 @@ function App() {
                   bgcolor: "yellow",
                   position: "absolute",
                   left: `${egg.progress}%`,
+                  transition: "all 1s linear",
                   // transform: `translateX(${egg.progress}%)`,
                 }}
               ></Box>
@@ -144,6 +201,7 @@ function App() {
                   bgcolor: "yellow",
                   position: "absolute",
                   right: `${egg.progress}%`,
+                  transition: "all 1s linear",
                   // transform: `translateX(-${egg.progress}%)`,
                 }}
               ></Box>
